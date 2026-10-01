@@ -3,7 +3,7 @@
   # 1. Frontend (React + Vite + Nginx)
   # =========================================================================
   frontend:
-    image: ${REGISTRY:-ghcr.io/muditha}/${FRONTEND_IMAGE:-debtlens-frontend}:${TAG:-latest}
+    image: ${REGISTRY:-ghcr.io/technicaldebtanalytics}/${FRONTEND_IMAGE:-debtlens-frontend}:${TAG:-latest}
     container_name: debtlens-frontend
     restart: unless-stopped
     ports:
@@ -17,17 +17,18 @@
   # 2. Main Spring Boot Backend (Application Service)
   # =========================================================================
   main-backend:
-    image: ${REGISTRY:-ghcr.io/muditha}/${MAIN_BACKEND_IMAGE:-debtlens-main-backend}:${TAG:-latest}
+    image: ${REGISTRY:-ghcr.io/technicaldebtanalytics}/${MAIN_BACKEND_IMAGE:-debtlens-main-backend}:${TAG:-latest}
     container_name: debtlens-main-backend
     restart: unless-stopped
     ports:
-      - "${MAIN_BACKEND_PORT:-8080}:8080"
+      - "127.0.0.1:${MAIN_BACKEND_PORT:-8080}:8080"
     environment:
       - PORT=8080
       # Neon PostgreSQL Database
       - DB_URL=${DB_URL}
       - DB_USERNAME=${DB_USERNAME}
       - DB_PASSWORD=${DB_PASSWORD}
+      - JPA_SHOW_SQL=${JPA_SHOW_SQL:-false}
       # CloudAMQP RabbitMQ Broker
       - RABBITMQ_HOST=${RABBITMQ_HOST}
       - RABBITMQ_PORT=${RABBITMQ_PORT:-5672}
@@ -47,13 +48,15 @@
       - AUTH0_AUDIENCE=${AUTH0_AUDIENCE}
       - AUTH0_ROLE_SYSTEM_USER=${AUTH0_ROLE_SYSTEM_USER:-rol_HhD7jrh3qJjAJV4q}
       # App Settings
-      - INVITATION_FRONTEND_URL=${INVITATION_FRONTEND_URL:-http://localhost:5173/invitation/accept}
+      - INVITATION_FRONTEND_URL=${INVITATION_FRONTEND_URL:-https://debtlens.mrt.lk/invitation/accept}
       - MAIL_HOST=${MAIL_HOST:-smtp.gmail.com}
       - MAIL_PORT=${MAIL_PORT:-587}
       - MAIL_USERNAME=${MAIL_USERNAME}
       - MAIL_PASSWORD=${MAIL_PASSWORD}
       - GITHUB_TOKEN=${GITHUB_TOKEN}
       - GITHUB_API_URL=${GITHUB_API_URL:-https://api.github.com}
+      - ANALYSIS_SERVICE_HEALTH_URL=${ANALYSIS_SERVICE_HEALTH_URL:-http://analysis-service:8082/actuator/health}
+      - ML_SERVICE_HEALTH_URL=${ML_SERVICE_HEALTH_URL:-http://ml-service:8000/health}
     networks:
       - debtlens-network
 
@@ -61,11 +64,11 @@
   # 3. Analysis Spring Boot Service (AST / Metrics / Parser)
   # =========================================================================
   analysis-service:
-    image: ${REGISTRY:-ghcr.io/muditha}/${ANALYSIS_IMAGE:-debtlens-analysis-service}:${TAG:-latest}
+    image: ${REGISTRY:-ghcr.io/technicaldebtanalytics}/${ANALYSIS_IMAGE:-debtlens-analysis-service}:${TAG:-latest}
     container_name: debtlens-analysis-service
     restart: unless-stopped
     ports:
-      - "${ANALYSIS_PORT:-8082}:8082"
+      - "127.0.0.1:${ANALYSIS_PORT:-8082}:8082"
     environment:
       - PORT=8082
       # CloudAMQP RabbitMQ Broker
@@ -85,11 +88,11 @@
   # 4. FastAPI Machine Learning Service (SATD & Bug Prediction)
   # =========================================================================
   ml-service:
-    image: ${REGISTRY:-ghcr.io/muditha}/${ML_IMAGE:-debtlens-ml-service}:${TAG:-latest}
+    image: ${REGISTRY:-ghcr.io/technicaldebtanalytics}/${ML_IMAGE:-debtlens-ml-service}:${TAG:-latest}
     container_name: debtlens-ml-service
     restart: unless-stopped
     ports:
-      - "${ML_PORT:-8000}:8000"
+      - "127.0.0.1:${ML_PORT:-8000}:8000"
     environment:
       - PORT=8000
       - DEBUG=false
@@ -99,6 +102,7 @@
       - RABBITMQ_USERNAME=${RABBITMQ_USERNAME}
       - RABBITMQ_PASSWORD=${RABBITMQ_PASSWORD}
       - RABBITMQ_VHOST=${RABBITMQ_VHOST}
+      - RABBITMQ_SSL_ENABLED=${RABBITMQ_SSL_ENABLED:-false}
       - RABBITMQ_ENABLED=true
       # RabbitMQ Queue Mappings
       - ML_JOB_QUEUE=${ML_JOB_QUEUE:-ML_job_cretion.queue}
